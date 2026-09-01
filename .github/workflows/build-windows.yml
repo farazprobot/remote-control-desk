@@ -11,8 +11,41 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Check out source
+      - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Restore project folders
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:GITHUB_WORKSPACE "RemoteControlDesk_Source.zip"
+
+          if (!(Test-Path -LiteralPath $archive)) {
+            throw "RemoteControlDesk_Source.zip was not found."
+          }
+
+          $source = Join-Path $env:RUNNER_TEMP "remote-control-source"
+          Remove-Item -Recurse -Force $source -ErrorAction SilentlyContinue
+
+          Expand-Archive `
+            -LiteralPath $archive `
+            -DestinationPath $source `
+            -Force
+
+          Get-ChildItem -LiteralPath $source -Force | ForEach-Object {
+            Copy-Item `
+              -LiteralPath $_.FullName `
+              -Destination $env:GITHUB_WORKSPACE `
+              -Recurse `
+              -Force
+          }
+
+          if (!(Test-Path "$env:GITHUB_WORKSPACE\control_bot\main.py")) {
+            throw "control_bot/main.py was not restored."
+          }
+
+          if (!(Test-Path "$env:GITHUB_WORKSPACE\desktop\app.py")) {
+            throw "desktop/app.py was not restored."
+          }
 
       - name: Set up Python
         uses: actions/setup-python@v5
